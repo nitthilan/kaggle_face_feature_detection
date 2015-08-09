@@ -39,11 +39,13 @@ print ("Num train images", num_images_training, "Num validating images", num_ima
 
 -- creating the model for linear regression
 -- Try one: 1-D without convolution
-model = nn.Sequential() 
+local model = nn.Sequential() 
 ninputs = IMG_DIM*IMG_DIM; nhidden = 100; noutputs = MAX_FEATURE
 model:add(nn.Linear(ninputs, nhidden))
 model:add(nn.ReLU())
 model:add(nn.Linear(nhidden, noutputs)) 
+
+
 
 
 
@@ -56,7 +58,8 @@ model:add(nn.Linear(nhidden, noutputs))
 
 -- Torch provides many common criterions to train neural networks.
 
-criterion = nn.MSECriterion()
+local criterion = nn.MSECriterion()
+-- criterion.sizeAverage = false
 
 
 ----------------------------------------------------------------------
@@ -133,13 +136,13 @@ sgd_params = {
 -- but should typically be determinined using cross-validation.
 
 -- we cycle 1e4 times over our training data
-for i = 1,1e4 do
+for epoch = 1,1e4 do
 
    -- this variable is used to estimate the average loss
    current_loss = 0
 
    -- an epoch is a full loop over our training data
-   for i = 1,num_images_training do
+   for img_id = 1,num_images_training do
 
       -- optim contains several optimization algorithms. 
       -- All of these algorithms assume the same parameters:
@@ -157,12 +160,13 @@ for i = 1,1e4 do
       --     the algorithm. SGD only estimates the function once, so
       --     that list just contains one value.
 
-      current_loss = current_loss + fs[1]
+      current_loss = current_loss + math.sqrt(fs[1])
+      -- print ("image error ", fs[1])
    end
 
    -- report average error on epoch
    current_loss = current_loss / num_images_training
-   print('current loss = ' .. current_loss)
+   print(epoch..' current loss = ' .. current_loss)
    -- Validating the trained model using validating data set
    local validation_loss = 0.0
    for i = num_images_training,num_images do
@@ -176,7 +180,31 @@ for i = 1,1e4 do
       -- print ('mse', mse, mse1)
       validation_loss = validation_loss + mse
    end
-   print('current validation loss', validation_loss/num_images_validating)
+   print(epoch..' current validation loss '.. validation_loss/num_images_validating)
+
+   -- saving the model for using it later
+   modsav = model:clone('weight', 'bias');
+   torch.save(FILEPATH_DATA_DIR.."trained_model_"..(epoch - math.floor(epoch/10)*10)..".t7",modsav)
+   -- torch.save(FILEPATH_DATA_DIR.."trained_model_full.t7",model)
+   
+   --[[
+   local savedModel = torch.load(FILEPATH_DATA_DIR.."trained_model.t7")
+   local validation_loss = 0.0
+   for i = num_images_training,num_images do
+      local image_id = image_id_map[i]
+      local inputs = image_data[image_id]
+      local target = feature_data[image_id]
+      local myPrediction = savedModel:forward(inputs)
+      local error = target - myPrediction
+      -- local mse1 = math.sqrt(torch.mean(torch.pow(error, 2)))
+      local mse = torch.norm(error)/math.sqrt(MAX_FEATURE);
+      -- print ('mse', mse, mse1)
+      validation_loss = validation_loss + mse
+   end
+   print(epoch..' current saved validation loss '.. validation_loss/num_images_validating)
+   ]]--
+
+
 
 end
 
