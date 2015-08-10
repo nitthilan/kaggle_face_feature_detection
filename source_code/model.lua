@@ -16,6 +16,7 @@ model:add(nn.Linear(nhidden, noutputs))
 --]]
 
 
+--[[
 -- hidden units, filter sizes (for ConvNet only):
 nfeats=1
 nstates = {64,64,128}
@@ -46,6 +47,35 @@ model:add(nn.SpatialSubtractiveNormalization(nstates[2], normkernel))
 
 -- stage 3 : standard 2-layer neural network
 model:add(nn.Reshape(21*21*nstates[2])) -- nstates[2]*filtsize*filtsize))
-model:add(nn.Linear(21*21*nstates[2]--[[nstates[2]*filtsize*filtsize--]], nstates[3]))
+model:add(nn.Linear(21*21*nstates[2], nstates[3])) 
 model:add(nn.Tanh())
+model:add(nn.Linear(nstates[3], noutputs))
+--]]
+
+
+-- hidden units, filter sizes (for ConvNet only):
+nfeats=1
+nstates = {64,64,128}
+filtsize = 5
+poolsize = 2
+normkernel = image.gaussian1D(7)
+noutputs = MAX_FEATURE
+-- a typical modern convolution network (conv+relu+pool)
+model = nn.Sequential()
+
+-- stage 1 : filter bank -> squashing -> L2 pooling -> normalization
+model:add(nn.SpatialConvolutionMM(nfeats, nstates[1], filtsize, filtsize))
+model:add(nn.ReLU())
+model:add(nn.SpatialMaxPooling(poolsize,poolsize,poolsize,poolsize))
+
+-- stage 2 : filter bank -> squashing -> L2 pooling -> normalization
+model:add(nn.SpatialConvolutionMM(nstates[1], nstates[2], filtsize, filtsize))
+model:add(nn.ReLU())
+model:add(nn.SpatialMaxPooling(poolsize,poolsize,poolsize,poolsize))
+
+-- stage 3 : standard 2-layer neural network
+model:add(nn.View(nstates[2]*21*21))
+model:add(nn.Dropout(0.5))
+model:add(nn.Linear(nstates[2]*21*21, nstates[3]))
+model:add(nn.ReLU())
 model:add(nn.Linear(nstates[3], noutputs))

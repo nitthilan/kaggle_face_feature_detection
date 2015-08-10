@@ -84,7 +84,14 @@ Results:
 	247current validation loss 0.056043914015213
 
 Points to remember:
-	- convolution networks expects input to be a 3d or 4d vector and not just a 2d vector so add 1x96x96
+	- convolution networks expects input to be a 3d or 4d vector and not just a 2d vector so add view as 1x96x96
+	- add model supporting convolutional network
+		- nn.Reshape helps in converting the 2D netwrok to linear network. Size is image width * image width * num features in convolutional layer
+	- Converting to cuda:
+		- require 'cunn'
+   		- torch.setdefaulttensortype('torch.FloatTensor')
+   		- model:cuda()
+   		- criterion:cuda()
 
 Questions to be answered:
 	- storing and restoring models

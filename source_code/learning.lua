@@ -3,6 +3,8 @@ require 'nn'
 require 'optim'
 require 'constants.lua'
 
+require 'cunn'
+torch.setdefaulttensortype('torch.FloatTensor')
 
 -- Loading the pre-processed data 
 local feature_data = torch.load(FILEPATH_DATA_DIR.."feature_data.raw", 'binary')
@@ -24,15 +26,17 @@ end
 local num_images = 0
 local image_id_map = {}
 for i=1,MAX_TRAIN_IMG do
+   --[[
 	local byte_vec = torch.ne(feature_data:select(1,i), -1.0)
 	if torch.sum(byte_vec) == MAX_FEATURE then
 		num_images = num_images + 1
 		image_id_map[num_images] = i
 	end
-   --[[
+   --]]
+   
    num_images = num_images + 1
    image_id_map[num_images] = i
-   --]]
+   
 end
 print ("Num images with all the 30 feature vectors ", num_images)
 -- Calculating the 80% of total images as the training data set and the rest as the test data set to validate the training
@@ -62,6 +66,10 @@ dofile("model.lua")
 
 local criterion = nn.MSECriterion()
 -- criterion.sizeAverage = false
+
+
+model:cuda()
+criterion:cuda()
 
 
 ----------------------------------------------------------------------
@@ -100,6 +108,7 @@ feval = function(x_new)
    local image_id = image_id_map[_nidx_]
    -- local inputs = image_data[image_id]
    local inputs = image_data[image_id]:view(1, 96,96)
+   inputs:cuda()
    -- print (inputs:dim(), inputs:size())
    local target = feature_data[image_id]
 
@@ -189,6 +198,7 @@ for epoch = 1,1e4 do
       local image_id = image_id_map[i]
       -- local inputs = image_data[image_id]
       local inputs = image_data[image_id]:view(1, 96,96)
+      inputs:cuda()
       local target = feature_data[image_id]
       local forward_output = model:forward(inputs)
       
