@@ -19,12 +19,13 @@ local feature_data = torch.Tensor(MAX_TEST_IMG, MAX_FEATURE)
 
 -- print (testImageFile["Image"][2])
 
-local savedModel = torch.load(FILEPATH_DATA_DIR.."trained_model_9.t7")
+local savedModel = torch.load(FILEPATH_DATA_DIR.."trained_model_5.t7")
 local validation_loss = 0.0
 for i = 1,MAX_TEST_IMG do
 	local x = testImageFile["Image"][i]
 	local image = x:split(' ')
-	local inputs = torch.Tensor(image)/MAX_PIXEL_VAL
+	local input_1d = torch.Tensor(image)/MAX_PIXEL_VAL
+	local inputs = input_1d:view(1, 96, 96)
   	local myPrediction = savedModel:forward(inputs)
   	feature_data[i] = torch.Tensor(myPrediction)
 end
@@ -42,6 +43,8 @@ for i=1,MAX_TEST_OUTPUT do
 
 	local location = feature_data[imageId][featureId]*96
 	if(location > 95) then location = 95; end
+	if(location < 0) then location = 0; end
+
 	testOutputFile:write({i,location})	
 end
 

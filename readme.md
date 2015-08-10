@@ -83,5 +83,12 @@ Results:
 	- 247 current loss = 0.026864869890844	
 	247current validation loss 0.056043914015213
 
+Points to remember:
+	- convolution networks expects input to be a 3d or 4d vector and not just a 2d vector so add 1x96x96
+
 Questions to be answered:
-	- saving and restoring models
+	- storing and restoring models
+	- using batch mode for updation instead of sgd
+	- using random image index to access
+	- using all the input images instead of only images which have all the 30 features
+	- using data agumentation i.e. increasing the number of data inputs by doing image horizontal flips and vertical flips

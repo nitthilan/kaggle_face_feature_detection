@@ -29,21 +29,23 @@ for i=1,MAX_TRAIN_IMG do
 		num_images = num_images + 1
 		image_id_map[num_images] = i
 	end
+   --[[
+   num_images = num_images + 1
+   image_id_map[num_images] = i
+   --]]
 end
 print ("Num images with all the 30 feature vectors ", num_images)
 -- Calculating the 80% of total images as the training data set and the rest as the test data set to validate the training
 
-local num_images_training = (80*num_images)/100
+local num_images_training = math.floor((80*num_images)/100)
 local num_images_validating = num_images - num_images_training
 print ("Num train images", num_images_training, "Num validating images", num_images_validating)
 
--- creating the model for linear regression
--- Try one: 1-D without convolution
-local model = nn.Sequential() 
-ninputs = IMG_DIM*IMG_DIM; nhidden = 100; noutputs = MAX_FEATURE
-model:add(nn.Linear(ninputs, nhidden))
-model:add(nn.ReLU())
-model:add(nn.Linear(nhidden, noutputs)) 
+
+
+dofile("model.lua")
+
+
 
 
 
@@ -96,7 +98,9 @@ feval = function(x_new)
    if _nidx_ > num_images_training then _nidx_ = 1 end
 
    local image_id = image_id_map[_nidx_]
-   local inputs = image_data[image_id]
+   -- local inputs = image_data[image_id]
+   local inputs = image_data[image_id]:view(1, 96,96)
+   -- print (inputs:dim(), inputs:size())
    local target = feature_data[image_id]
 
    -- print (image_id, target)
@@ -105,9 +109,21 @@ feval = function(x_new)
    -- batch methods)
    dl_dx:zero()
 
+   -- Logic to make the predicted output to target output so that it does not affect the error calculation
+   -- 
+   local byte_vec_fea = torch.ne(target, -1.0)
+   local byte_vec_non_fea = torch.eq(target, -1.0)
+   local forward_output = model:forward(inputs)   
+   -- print (forward_output)
+
+   local zeroed_target = torch.cmul(target, byte_vec_fea:double())
+   local selected_output = torch.cmul(forward_output, byte_vec_non_fea:double())
+   local equalised_target = torch.add(zeroed_target,selected_output)
+   -- print(byte_vec_fea, byte_vec_non_fea, forward_output, zeroed_target, selected_output, equalised_target)
    -- evaluate the loss function and its derivative wrt x, for that sample
-   local loss_x = criterion:forward(model:forward(inputs), target)
-   model:backward(inputs, criterion:backward(model.output, target))
+
+   local loss_x = criterion:forward(forward_output, equalised_target)
+   model:backward(inputs, criterion:backward(model.output, equalised_target))
 
    -- return loss(x) and dloss/dx
    return loss_x, dl_dx
@@ -171,12 +187,19 @@ for epoch = 1,1e4 do
    local validation_loss = 0.0
    for i = num_images_training,num_images do
       local image_id = image_id_map[i]
-      local inputs = image_data[image_id]
+      -- local inputs = image_data[image_id]
+      local inputs = image_data[image_id]:view(1, 96,96)
       local target = feature_data[image_id]
-      local myPrediction = model:forward(inputs)
-      local error = target - myPrediction
+      local forward_output = model:forward(inputs)
+      
+      local byte_vec_fea = torch.ne(feature_data:select(1,image_id), -1.0)
+      local byte_vec_non_fea = torch.eq(feature_data:select(1,image_id), -1.0)
+      local zeroed_target = torch.cmul(target, byte_vec_fea:double())
+      local selected_output = torch.cmul(forward_output, byte_vec_non_fea:double())
+      local equalised_target = torch.add(zeroed_target,selected_output)
+      local error = equalised_target - forward_output
       -- local mse1 = math.sqrt(torch.mean(torch.pow(error, 2)))
-      local mse = torch.norm(error)/math.sqrt(MAX_FEATURE);
+      local mse = torch.norm(error)/math.sqrt(torch.sum(byte_vec_fea));
       -- print ('mse', mse, mse1)
       validation_loss = validation_loss + mse
    end
