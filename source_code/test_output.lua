@@ -1,3 +1,5 @@
+require 'cunn'
+torch.setdefaulttensortype('torch.FloatTensor')
 require 'nn'
 require 'csvigo'
 require 'constants.lua'
@@ -19,17 +21,18 @@ local feature_data = torch.Tensor(MAX_TEST_IMG, MAX_FEATURE)
 
 -- print (testImageFile["Image"][2])
 
-local savedModel = torch.load(FILEPATH_DATA_DIR.."trained_model_8.t7")
-savedModel:cuda()
+local savedModel = torch.load(FILEPATH_DATA_DIR.."trained_model_7.t7")
+-- savedModel:cuda()
 local validation_loss = 0.0
 for i = 1,MAX_TEST_IMG do
 	local x = testImageFile["Image"][i]
 	local image = x:split(' ')
 	local input_1d = torch.Tensor(image)/MAX_PIXEL_VAL
 	local inputs = input_1d:view(1, 96, 96)
-	inputs:cuda()
+	inputs = inputs:cuda()
   	local myPrediction = savedModel:forward(inputs)
-  	feature_data[i] = torch.Tensor(myPrediction)
+        -- print (myPrediction:float())
+  	feature_data[i] = torch.Tensor(myPrediction:float())
 end
 
 -- RowId,ImageId,FeatureName,Location
