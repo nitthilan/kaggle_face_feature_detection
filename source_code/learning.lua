@@ -1,14 +1,17 @@
-
+require 'torch'
+require 'cunn'
+torch.setdefaulttensortype('torch.FloatTensor')
 require 'nn'
 require 'optim'
 require 'constants.lua'
 
-require 'cunn'
-torch.setdefaulttensortype('torch.FloatTensor')
+torch.setnumthreads(8)--opt.threads)
+torch.manualSeed(1)--opt.seed)
 
 -- Loading the pre-processed data 
 local feature_data = torch.load(FILEPATH_DATA_DIR.."feature_data.raw", 'binary')
 local image_data = torch.load(FILEPATH_DATA_DIR.."image_data.raw", 'binary')
+image_data = image_data:float()
 
 local csvFile = io.open(FILEPATH_DATA_DIR..'training.csv', 'r')  
 local header = csvFile:read()
@@ -70,6 +73,7 @@ local criterion = nn.MSECriterion()
 
 model:cuda()
 criterion:cuda()
+-- model:float()
 
 
 ----------------------------------------------------------------------
@@ -108,7 +112,7 @@ feval = function(x_new)
    local image_id = image_id_map[_nidx_]
    -- local inputs = image_data[image_id]
    local inputs = image_data[image_id]:view(1, 96,96)
-   inputs:cuda()
+   inputs = inputs:cuda()
    -- print (inputs:dim(), inputs:size())
    local target = feature_data[image_id]
 
@@ -126,8 +130,8 @@ feval = function(x_new)
    -- print (forward_output)
 
    local zeroed_target = torch.cmul(target, byte_vec_fea:double())
-   local selected_output = torch.cmul(forward_output, byte_vec_non_fea:double())
-   local equalised_target = torch.add(zeroed_target,selected_output)
+   local selected_output = torch.cmul(forward_output:cuda(), byte_vec_non_fea:cuda())
+   local equalised_target = torch.add(zeroed_target:cuda(),selected_output:cuda())
    -- print(byte_vec_fea, byte_vec_non_fea, forward_output, zeroed_target, selected_output, equalised_target)
    -- evaluate the loss function and its derivative wrt x, for that sample
 
@@ -198,15 +202,15 @@ for epoch = 1,1e4 do
       local image_id = image_id_map[i]
       -- local inputs = image_data[image_id]
       local inputs = image_data[image_id]:view(1, 96,96)
-      inputs:cuda()
+      inputs = inputs:cuda()
       local target = feature_data[image_id]
       local forward_output = model:forward(inputs)
       
       local byte_vec_fea = torch.ne(feature_data:select(1,image_id), -1.0)
       local byte_vec_non_fea = torch.eq(feature_data:select(1,image_id), -1.0)
       local zeroed_target = torch.cmul(target, byte_vec_fea:double())
-      local selected_output = torch.cmul(forward_output, byte_vec_non_fea:double())
-      local equalised_target = torch.add(zeroed_target,selected_output)
+      local selected_output = torch.cmul(forward_output, byte_vec_non_fea:cuda())
+      local equalised_target = torch.add(zeroed_target:cuda(),selected_output:cuda())
       local error = equalised_target - forward_output
       -- local mse1 = math.sqrt(torch.mean(torch.pow(error, 2)))
       local mse = torch.norm(error)/math.sqrt(torch.sum(byte_vec_fea));
