@@ -12,9 +12,10 @@ if not opt then
    cmd:text('SVHN Model Definition')
    cmd:text()
    cmd:text('Options:')
-   cmd:option('-model', 'mlp', 'type of model to construct: mlp | convnet')
+   cmd:option('-model', 'convnet', 'type of model to construct: mlp | convnet')
    cmd:option('-type', 'double', 'type: double | cuda')
    cmd:option('-numdata', 'all_features', 'numdata: all_images | all_features')
+   cmd:option('-batch_size', 10, 'mini-batch size (1 = pure stochastic)')
    cmd:text()
    opt = cmd:parse(arg or {})
 end
@@ -24,7 +25,7 @@ if(opt.type == 'cuda') then
    torch.setdefaulttensortype('torch.FloatTensor')
 end
 
-torch.setnumthreads(8)--opt.threads)
+torch.setnumthreads(10)--opt.threads)
 torch.manualSeed(1)--opt.seed)
 
 -- Loading the pre-processed data 
@@ -127,57 +128,68 @@ feval = function(x_new)
    if x ~= x_new then
       x:copy(x_new)
    end
-
-   -- select a new training sample
-   _nidx_ = (_nidx_ or 0) + 1
-   if _nidx_ > num_images_training then _nidx_ = 1 end
-
-   local image_id = image_id_map[_nidx_]
-   local inputs
-   if opt.model == 'mlp' then
-      inputs = image_data[image_id]
-   else
-      inputs = image_data[image_id]:view(1, 96,96)
-   end
-   
-   if opt.type == 'cuda' then
-      inputs = inputs:cuda()
-   end
-   -- print (inputs:dim(), inputs:size())
-   local target = feature_data[image_id]
-
-   -- print (image_id, target)
-
    -- reset gradients (gradients are always accumulated, to accomodate 
    -- batch methods)
    dl_dx:zero()
+   local loss_x = 0
 
-   -- Logic to make the predicted output to target output so that it does not affect the error calculation
-   -- 
-   local loss_x
-   if opt.numdata == 'all_images' then
-      local forward_output = model:forward(inputs)   
-      local byte_vec_fea = torch.ne(target, -1.0)
-      local byte_vec_non_fea = torch.eq(target, -1.0)
-      local zeroed_target, selected_output, equalised_target
-      if opt.type == 'cuda' then
-         zeroed_target = torch.cmul(target:cuda(), byte_vec_fea:cuda())
-         selected_output = torch.cmul(forward_output:cuda(), byte_vec_non_fea:cuda())
-         equalised_target = torch.add(zeroed_target:cuda(), selected_output:cuda())
-      else
-         zeroed_target = torch.cmul(target:double(), byte_vec_fea:double())
-         selected_output = torch.cmul(forward_output:double(), byte_vec_non_fea:double())
-         equalised_target = torch.add(zeroed_target:double(), selected_output:double())
+   for batch_num = 1,opt.batch_size do 
+      -- select a new training sample
+      _nidx_ = (_nidx_ or 0) + 1
+      if _nidx_ > num_images_training then _nidx_ = 1 end
+
+      if _nidx_ % 50 == 0 then
+         collectgarbage()
       end
-      -- print(byte_vec_fea, byte_vec_non_fea, forward_output, zeroed_target, selected_output, equalised_target)
-      -- evaluate the loss function and its derivative wrt x, for that sample
+      -- print (_nidx_)
 
-      loss_x = criterion:forward(forward_output, equalised_target)
-      model:backward(inputs, criterion:backward(model.output, equalised_target))
-   else
-      loss_x = criterion:forward(model:forward(inputs), target)
-      model:backward(inputs, criterion:backward(model.output, target))
+      local image_id = image_id_map[_nidx_]
+      local inputs
+      if opt.model == 'mlp' then
+         inputs = image_data[image_id]
+      else
+         inputs = image_data[image_id]:view(1, 96,96)
+      end
+      
+      if opt.type == 'cuda' then
+         inputs = inputs:cuda()
+      end
+      -- print (inputs:dim(), inputs:size())
+      local target = feature_data[image_id]
+
+      -- print (image_id, target)
+
+
+      -- Logic to make the predicted output to target output so that it does not affect the error calculation
+      -- 
+      local loss
+      if opt.numdata == 'all_images' then
+         local forward_output = model:forward(inputs)   
+         local byte_vec_fea = torch.ne(target, -1.0)
+         local byte_vec_non_fea = torch.eq(target, -1.0)
+         local zeroed_target, selected_output, equalised_target
+         if opt.type == 'cuda' then
+            zeroed_target = torch.cmul(target:cuda(), byte_vec_fea:cuda())
+            selected_output = torch.cmul(forward_output:cuda(), byte_vec_non_fea:cuda())
+            equalised_target = torch.add(zeroed_target:cuda(), selected_output:cuda())
+         else
+            zeroed_target = torch.cmul(target:double(), byte_vec_fea:double())
+            selected_output = torch.cmul(forward_output:double(), byte_vec_non_fea:double())
+            equalised_target = torch.add(zeroed_target:double(), selected_output:double())
+         end
+         -- print(byte_vec_fea, byte_vec_non_fea, forward_output, zeroed_target, selected_output, equalised_target)
+         -- evaluate the loss function and its derivative wrt x, for that sample
+
+         loss = criterion:forward(forward_output, equalised_target)
+         model:backward(inputs, criterion:backward(model.output, equalised_target))
+      else
+         loss = criterion:forward(model:forward(inputs), target)
+         model:backward(inputs, criterion:backward(model.output, target))
+      end
+      loss_x = loss_x + loss
    end
+   loss_x = loss_x/opt.batch_size
+   dl_dx = dl_dx/opt.batch_size
 
    -- return loss(x) and dloss/dx
    return loss_x, dl_dx
@@ -240,11 +252,10 @@ for epoch = 1,1e4 do
    -- time taken
    time = sys.clock() - time
    time = time / num_images_training
-   print("\n==> time to learn 1 sample = " .. (time*1000) .. 'ms')
-
    -- report average error on epoch
    current_loss = current_loss / num_images_training
    print(epoch..' current loss = ' .. current_loss)
+   print("\n==> time to learn 1 sample = " .. (time*1000) .. ' ms')
    -- Validating the trained model using validating data set
    local validation_loss = 0.0
    time = sys.clock()
@@ -284,7 +295,7 @@ for epoch = 1,1e4 do
    -- time taken
    time = sys.clock() - time
    time = time / num_images_training
-   print("\n==> time to validate 1 sample = " .. (time*1000) .. 'ms')
+   print("\n==> time to validate 1 sample = " .. (time*1000) .. ' ms')
 
    -- saving the model for using it later
    modsav = model:clone('weight', 'bias');

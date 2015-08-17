@@ -103,10 +103,23 @@ Points to remember:
    	- scp -i ../../../aws_information/aws_torch7_key_pair.pem ubuntu@ec2-52-20-55-173.compute-1.amazonaws.com:/home/ubuntu/workspace/kaggle_face_feature_detection/data/test_output.csv .
 - ssh -i ../../../aws_information/aws_torch7_key_pair.pem ubuntu@ec2-52-3-128-113.compute-1.amazonaws.com
 - cuda based training of 47 iterations gave a error of 4.09751 decrease from the previous best :(
+- to make the process reproducible set the seed value for 
+	- torch.manualSeed(1)
+	- model ???
+- Performance numbers:
+	- i5 ssd hardisk 
+		- mlp = 60ms per train example
+		- convnet 140ms per train and 10 ms per validation
+- Garbage collection
+	- http://luatut.com/collectgarbage.html
+		- check in which iteration it prints out of memory and based on that do garbage collection
+		- if _nidx_ % 50 == 0 then
+	         collectgarbage()
+	      end
 
 Questions to be answered:
-- storing and restoring models
+- [x] storing and restoring models
 - using batch mode for updation instead of sgd
 - using random image index to access
-- using all the input images instead of only images which have all the 30 features
+- [x] using all the input images instead of only images which have all the 30 features
 - using data agumentation i.e. increasing the number of data inputs by doing image horizontal flips and vertical flips
