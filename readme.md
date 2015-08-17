@@ -84,18 +84,29 @@ Results:
 	247current validation loss 0.056043914015213
 
 Points to remember:
-	- convolution networks expects input to be a 3d or 4d vector and not just a 2d vector so add view as 1x96x96
-	- add model supporting convolutional network
-		- nn.Reshape helps in converting the 2D netwrok to linear network. Size is image width * image width * num features in convolutional layer
-	- Converting to cuda:
-		- require 'cunn'
-   		- torch.setdefaulttensortype('torch.FloatTensor')
-   		- model:cuda()
-   		- criterion:cuda()
+- convolution networks expects input to be a 3d or 4d vector and not just a 2d vector so add view as 1x96x96
+- add model supporting convolutional network
+- nn.Reshape helps in converting the 2D netwrok to linear network. Size is image width * image width * num features in convolutional layer
+- Converting to cuda:
+- require 'cunn'
+   	- torch.setdefaulttensortype('torch.FloatTensor')
+   	- model:cuda()
+   	- criterion:cuda()
+   	- input = input:cuda()
+   	- cuda supports only floats
+   	- reinstalling torch7:
+   	- sudo curl -s https://raw.githubusercontent.com/torch/ezinstall/master/clean-old.sh | bash
+   	- sudo curl -s https://raw.githubusercontent.com/torch/ezinstall/master/install-all | bash
+   	- test.csv should have one extra field at the end for csvigo to work so adding ,Location to file
+   
+   	- only float is supported in cuda
+   	- scp -i ../../../aws_information/aws_torch7_key_pair.pem ubuntu@ec2-52-20-55-173.compute-1.amazonaws.com:/home/ubuntu/workspace/kaggle_face_feature_detection/data/test_output.csv .
+- ssh -i ../../../aws_information/aws_torch7_key_pair.pem ubuntu@ec2-52-3-128-113.compute-1.amazonaws.com
+- cuda based training of 47 iterations gave a error of 4.09751 decrease from the previous best :(
 
 Questions to be answered:
-	- storing and restoring models
-	- using batch mode for updation instead of sgd
-	- using random image index to access
-	- using all the input images instead of only images which have all the 30 features
-	- using data agumentation i.e. increasing the number of data inputs by doing image horizontal flips and vertical flips
+- storing and restoring models
+- using batch mode for updation instead of sgd
+- using random image index to access
+- using all the input images instead of only images which have all the 30 features
+- using data agumentation i.e. increasing the number of data inputs by doing image horizontal flips and vertical flips
