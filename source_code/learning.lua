@@ -14,8 +14,8 @@ if not opt then
    cmd:text('Options:')
    cmd:option('-model', 'convnet', 'type of model to construct: mlp | convnet')
    cmd:option('-type', 'cuda', 'type: double | cuda')
-   cmd:option('-numdata', 'all_images', 'numdata: all_images | all_features')
-   cmd:option('-batch_size', 10, 'mini-batch size (1 = pure stochastic)')
+   cmd:option('-numdata', 'all_features', 'numdata: all_images | all_features')
+   cmd:option('-batch_size', 1, 'mini-batch size (1 = pure stochastic)')
    cmd:text()
    opt = cmd:parse(arg or {})
 end
@@ -230,7 +230,8 @@ for epoch = 1,1e4 do
    model:training()
    
    -- shuffle at each epoch
-   shuffle_idx = torch.randperm(num_images)
+   shuffle_idx = torch.randperm(num_images_training)
+   -- print (shuffle_idx)
    
    -- this variable is used to estimate the average loss
    current_loss = 0
@@ -265,9 +266,9 @@ for epoch = 1,1e4 do
    time = sys.clock() - time
    time = time / num_images_training
    -- report average error on epoch
-   current_loss = current_loss / num_images_training
+   current_loss = current_loss * opt.batch_size / num_images_training
    print(epoch..' current loss = ' .. current_loss)
-   print("==> time to learn 1 sample = " .. (time*1000) .. ' ms')
+   -- print("==> time to learn 1 sample = " .. (time*1000) .. ' ms')
    
    -- set model to evaluate mode (for modules that differ in training and testing, like Dropout)
    model:evaluate()
@@ -275,7 +276,7 @@ for epoch = 1,1e4 do
    local validation_loss = 0.0
    time = sys.clock()
    for i = num_images_training,num_images do
-      local image_id = image_id_map[shuffle_idx[i]]
+      local image_id = image_id_map[i]
       if opt.model == 'mlp' then
          inputs = image_data[image_id]
       else
@@ -310,7 +311,7 @@ for epoch = 1,1e4 do
    -- time taken
    time = sys.clock() - time
    time = time / num_images_training
-   print("==> time to validate 1 sample = " .. (time*1000) .. ' ms')
+   -- print("==> time to validate 1 sample = " .. (time*1000) .. ' ms')
 
    -- saving the model for using it later
    modsav = model:clone('weight', 'bias');
