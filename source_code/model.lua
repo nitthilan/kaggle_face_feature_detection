@@ -80,7 +80,7 @@ elseif opt.model == 'convnet' then
 
 		-- stage 3 : standard 2-layer neural network
 		model:add(nn.View(nstates[3]*12*12))
-		model:add(nn.Dropout(0.5))
+		-- model:add(nn.Dropout(0.5))
 		model:add(nn.Linear(nstates[3]*12*12, nstates[4]))
 	        -- model:add(nn.ReLU())
 		model:add(nn.Tanh())

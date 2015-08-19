@@ -249,7 +249,7 @@ for epoch = 1,1e4 do
       --   + a point x
       --   + some parameters, which are algorithm-specific
       
-      -- _,fs = optim.sgd(feval,x,sgd_params)
+      --_,fs = optim.sgd(feval,x,sgd_params)
       _,fs = optim.nag(feval,x,sgd_params)
 
       -- Functions in optim all return two things:
