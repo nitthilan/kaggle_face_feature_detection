@@ -100,8 +100,8 @@ Points to remember:
    	- test.csv should have one extra field at the end for csvigo to work so adding ,Location to file
    
    	- only float is supported in cuda
-   	- scp -i ../../../aws_information/aws_torch7_key_pair.pem ubuntu@ec2-52-20-55-173.compute-1.amazonaws.com:/home/ubuntu/workspace/kaggle_face_feature_detection/data/test_output.csv .
-- ssh -i ../../../aws_information/aws_torch7_key_pair.pem ubuntu@ec2-52-3-128-113.compute-1.amazonaws.com
+   	- scp -i ../../../../aws_information/aws_torch7_key_pair.pem ubuntu@ec2-52-3-149-169.compute-1.amazonaws.com:/home/ubuntu/workspace/kaggle_face_feature_detection/data/test_output.csv .
+- ssh -i ../../../../aws_information/aws_torch7_key_pair.pem ubuntu@ec2-52-3-149-169.compute-1.amazonaws.com
 - cuda based training of 47 iterations gave a error of 4.09751 decrease from the previous best :(
 - to make the process reproducible set the seed value for 
 	- torch.manualSeed(1)
@@ -110,12 +110,47 @@ Points to remember:
 	- i5 ssd hardisk 
 		- mlp = 60ms per train example
 		- convnet 140ms per train and 10 ms per validation
+	- gpu running:
+		- 1 current loss = 0.0044833544608836	
+		==> time to learn 1 sample = 57.466043768642 ms	
+		1 current validation loss 0.029351259363066	
+		==> time to validate 1 sample = 5.8282541337414 ms	
+		2 current loss = 0.0029634770826176	
+		==> time to learn 1 sample = 57.538097567647 ms	
+		2 current validation loss 0.026195562610115	
+		==> time to validate 1 sample = 5.8021699992296 ms
+	- cuda optimised
+		- 1 current loss = 0.011088124601783	
+		==> time to learn 1 sample = 6.5466875784865 ms	
+		1 current validation loss 0.033954345414074	
+		==> time to validate 1 sample = 0.40231422286167 ms
 - Garbage collection
 	- http://luatut.com/collectgarbage.html
 		- check in which iteration it prints out of memory and based on that do garbage collection
 		- if _nidx_ % 50 == 0 then
 	         collectgarbage()
 	      end
+- cuda output [https://github.com/torch/cutorch]:
+	- cutorch.getDeviceCount() = 1, cutorch.getDevice() = 1
+	- cutorch.getMemoryUsage(1) = (3687022592	4294770688) (freeMemory, totalMemory)
+	- cutorch.seed([devID])
+	- cutorch.manualSeed(seed [, device])
+	- cutorch.getRNGState([device]) - RNG RandomNumberGenerator
+- https://groups.google.com/forum/#!topic/torch7/Id04ETdGQHU
+	- model:training() - if DropOut is used then only during training we need to drop but this should not happen during validation or test
+	- model:evaluate() - is to be called before validation/test
+- 136 current loss = 0.0036384740181395	
+136 current validation loss 0.030288503368102 
+after kaggle submission 4.29478
+
+- 182 current loss = 0.028159003744146	
+182 current validation loss 0.040512910721829
+4.38013
+- 1291 current loss = 0.022439730285428	
+1291 current validation loss 0.035369344458706
+Your submission scored 3.92498
+
+- tanh seems to reduce the validation error consistently while reLu does not seem to reduce the validation error
 
 Questions to be answered:
 - [x] storing and restoring models
