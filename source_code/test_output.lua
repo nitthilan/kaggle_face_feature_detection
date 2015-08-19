@@ -21,7 +21,7 @@ local feature_data = torch.Tensor(MAX_TEST_IMG, MAX_FEATURE)
 
 -- print (testImageFile["Image"][2])
 
-local savedModel = torch.load(FILEPATH_DATA_DIR.."trained_model_6.t7")
+local savedModel = torch.load(FILEPATH_DATA_DIR.."trained_model_8.t7")
 -- savedModel:cuda()
 -- savedModel:evaluate()
 local validation_loss = 0.0

@@ -63,28 +63,30 @@ elseif opt.model == 'convnet' then
 
 		-- stage 1 : filter bank -> squashing -> L2 pooling -> normalization
 		model:add(nn.SpatialConvolutionMM(nfeats, nstates[1], filtsize, filtsize, 1, 1, padding, padding))
-		model:add(nn.ReLU())
-		-- model:add(nn.Tanh())
+		-- model:add(nn.ReLU())
+		model:add(nn.Tanh())
 		model:add(nn.SpatialMaxPooling(poolsize,poolsize,poolsize,poolsize))
 
 		-- stage 2 : filter bank -> squashing -> L2 pooling -> normalization
 		model:add(nn.SpatialConvolutionMM(nstates[1], nstates[2], filtsize, filtsize, 1, 1, padding, padding))
-		model:add(nn.ReLU())
-		-- model:add(nn.Tanh())
+		-- model:add(nn.ReLU())
+		model:add(nn.Tanh())
 		model:add(nn.SpatialMaxPooling(poolsize,poolsize,poolsize,poolsize))
 		
 		model:add(nn.SpatialConvolutionMM(nstates[2], nstates[3], filtsize, filtsize, 1, 1, padding, padding))
-		model:add(nn.ReLU())
-		-- model:add(nn.Tanh())
+		-- model:add(nn.ReLU())
+		model:add(nn.Tanh())
 		model:add(nn.SpatialMaxPooling(poolsize,poolsize,poolsize,poolsize))
 
 		-- stage 3 : standard 2-layer neural network
 		model:add(nn.View(nstates[3]*12*12))
 		model:add(nn.Dropout(0.5))
 		model:add(nn.Linear(nstates[3]*12*12, nstates[4]))
+	        -- model:add(nn.ReLU())
+		model:add(nn.Tanh())
 		model:add(nn.Linear(nstates[4], nstates[5]))
-	        model:add(nn.ReLU())
-		-- model:add(nn.Tanh())
+	        -- model:add(nn.ReLU())
+		model:add(nn.Tanh())
 		model:add(nn.Linear(nstates[5], noutputs))
 	end
 end
